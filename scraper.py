@@ -3,7 +3,7 @@ import urllib.parse
 import urllib.request
 
 # List of the 2015 top grossing films, which will be parsed for the URLs
-url = "http://www.boxofficemojo.com/yearly/chart/?yr=2015&p=.htm"
+url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=2015&p=.htm"
 
 # General http address for Box Office Mojo
 bom = "http://www.boxofficemojo.com"
@@ -24,20 +24,41 @@ soup = BeautifulSoup(html)
 organized = soup.prettify() 	
 #print(organized)
 
-# Return a list of the movie URLs
-def getMovieURLs(soup):
+# Return a list of the movie URLs from html soup
+def getMovieURLs():
+
+	# Keep track of the current page
+	currentPage = 0
+
+	# URL that will be edited 
+	url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=2015&p=.htm"
 
 	# Create the list
-	urls = []
+	urlList = []
 
-	# Search the soup for the <a tag that precedes all href links
-	for link in soup.find_all('a'):
-		name = str(link.get('href'))
+	while True:
+		currentPage += 1
+		url = url.replace("?page=" + str(currentPage - 1), "?page=" + str(currentPage))
+		#print (url)
 
-		# if movies is in the link then it's the one we're looking for,
-		# not ref = ft is a special case that we don't want to be in the list
-		if 'movies' in name and 'ref=ft' not in name: 
-			urls.append(bom + name) # Add it to the list, maybe should do some sorting here?
-	print(urls)
+		with urllib.request.urlopen(url) as response:
+			html = response.read()
 
-getMovieURLs(soup)
+		if "There was an error processing this request" in str(html):
+			break
+
+		soup = BeautifulSoup(html, "html.parser")
+
+		# Search the soup for the <a tag that precedes all href links
+		for link in soup.find_all('a'):
+			name = str(link.get('href'))
+
+			# if movies is in the link then it's the one we're looking for,
+			# not ref = ft is a special case that we don't want to be in the list
+			if 'movies' in name and 'ref=ft' not in name: 
+				urlList.append(bom + name) # Add it to the list, maybe should do some sorting here?
+
+	print (urlList)
+
+getMovieURLs()
+
