@@ -37,3 +37,16 @@ Install these packages:
 		pip install beautifulsoup4 
 		https://www.crummy.com/software/BeautifulSoup/bs4/doc/
 
+	- 	The urllib package doesn't need to be installed
+
+	-	For a database solution that works well with python and uses Maria.db
+		http://stackoverflow.com/questions/32036119/beautiful-soup-webscrape-into-mysql
+		https://github.com/PyMySQL/PyMySQL#example
+		pip install PyMySQL
+
+		Read the getting started section to learn more about SQL and relational databases in general.
+		https://mariadb.org/learn/
+
+		
+
+
