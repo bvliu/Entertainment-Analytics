@@ -41,12 +41,14 @@ def getMovieURLs():
 		url = url.replace("?page=" + str(currentPage - 1), "?page=" + str(currentPage))
 		#print (url)
 
-		with urllib.request.urlopen(url) as response:
+		with urllib.request.urlopen(url) as response:	
 			html = response.read()
 
+		# base case, if we've reached the end of the pages then stop the loop
 		if "There was an error processing this request" in str(html):
 			break
-
+		
+		# else we do this:
 		soup = BeautifulSoup(html, "html.parser")
 
 		# Search the soup for the <a tag that precedes all href links
