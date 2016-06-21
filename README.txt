@@ -47,8 +47,5 @@ Install these packages:
 		Read the getting started section to learn more about SQL and relational databases in general.
 		https://mariadb.org/learn/
 
-		- SQL: Structured Query Language. Rows (contain an entity) and columns (contain an attribute).
-		- Two tables can relate to each other by having a common field. 
-
 	
 

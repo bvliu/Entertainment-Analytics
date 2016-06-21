@@ -1,5 +1,10 @@
 Notes on MariaDB:
 
+
+- SQL: Structured Query Language. Rows (contain an entity) and columns (contain an attribute).
+- Two tables can relate to each other by having a common field. 
+
+
 Windows 10 installation:
 https://downloads.mariadb.org/
 
@@ -36,7 +41,7 @@ INSERT INTO books (Title,SeriesID,AuthorID) VALUES('The Fellowship of the Ring',
 
 
 
- Another way to create table:
+Another way to create table:
  CREATE TABLE `movies` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
     `title` varchar(255) COLLATE utf8_bin NOT NULL,

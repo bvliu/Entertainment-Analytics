@@ -73,11 +73,23 @@ def putURLsIntoDatabase(myList):
 
 	try:
 		with connection.cursor() as cursor:
+			# Clears the table
+			sql = "TRUNCATE `movies`"
+			cursor.execute(sql)
+
+			#Ready to reinsert values into the table
 			sql = "INSERT INTO `movies` (`title`) VALUES (%s)"
 			for movie in myList:
-				print ("success")
 				cursor.execute(sql, movie)
+
 		connection.commit()
+
+		with connection.cursor() as cursor:
+			sql = "SELECT * FROM `movies`"
+			cursor.execute(sql)
+			result = cursor.fetchall()
+			print(result[1]['id'])
+			print(result[1]['title'])
 
 	finally:
 		connection.close()
