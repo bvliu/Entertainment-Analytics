@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import urllib.parse
 import urllib.request
+import pymysql.cursors
 
 # List of the 2015 top grossing films, which will be parsed for the URLs
 url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=2015&p=.htm"
@@ -61,6 +62,26 @@ def getMovieURLs():
 				urlList.append(bom + name) # Add it to the list, maybe should do some sorting here?
 
 	print (urlList)
+	putURLsIntoDatabase(urlList)
+
+
+def putURLsIntoDatabase(myList):
+
+	connection = pymysql.connect(host = 'localhost', user = 'root',
+		password = 'pass', db = 'test', charset = 'utf8mb4',
+		cursorclass = pymysql.cursors.DictCursor)
+
+	try:
+		with connection.cursor() as cursor:
+			sql = "INSERT INTO `movies` (`title`) VALUES (%s)"
+			for movie in myList:
+				print ("success")
+				cursor.execute(sql, movie)
+		connection.commit()
+
+	finally:
+		connection.close()
+
 
 getMovieURLs()
 
