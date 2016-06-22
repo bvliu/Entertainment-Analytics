@@ -1,6 +1,8 @@
 Pandas Data Structures: 
 
-http://www.gregreda.com/2013/10/26/intro-to-pandas-data-structures/
+Definitions and Intro: http://www.gregreda.com/2013/10/26/intro-to-pandas-data-structures/
+Multiple tutorials: http: //pandas.pydata.org/pandas-docs/version/0.18.1/tutorials.html
+Intro/Saving to CSV and reading from CSV: https://pythonprogramming.net/pandas-saving-reading-csv-file/
 
 What is it? 
 Open source Python library for data analysis.  
