@@ -8,24 +8,21 @@ Open source Python library for data analysis.
 
 Series and DataFrame (built on top of NumPy) 
 
-**Code** 
-
+-----------------------------------
 import pandas as pd 
 import numpy as np 
 import matplotlib.pyplot as plt 
 
 pd.set_option('max_columns', 50) 
 %matplotlib inline
-
-**** 
+-----------------------------------
 
 Series: 1-D object similar to an array, list, or column in a table.  Assigned a labeled index to each item in Series. 
 (assigned from 0 (1st object) to the size-1. 
 
 Convert to a dictionary using the keys: 
 
-**Code**
-
+-----------------------------------
 d= {'Movie1': 10,'Movie2': 8,'Movie3': 9,'Movie4': 6,'Movie5': 5}
 movies=pd.Series(d)
 movies 
@@ -35,39 +32,33 @@ Movie2         8
 Movie3         9
 Movie4         6
 Movie5         5
-
-**** 
+-----------------------------------
 
 Changing the values: 
 
 - based on the index
 
-**Code**
-
+-----------------------------------
 print('Old value:', movies['Movie1'])
 movies['Movie1'] = 7
 print('New value:', movies['Movie1'])
 
 ('Old value:', 9)
 ('New value:', 7)
-
-****
+-----------------------------------
 
 Adding two Series together: 
 - Returns union of two series with shared index values if they are the same. 
 
-**Code**
-
+-----------------------------------
 print(cities[['Chicago', 'New York', 'Portland']])
 print('\n')
 print(cities[['Austin', 'New York']])
 print('\n')
 print(cities[['Chicago', 'New York', 'Portland']] + cities[['Austin', 'New York']])
+-----------------------------------
 
-****
-
-**Output**
-
+Output-----------------------------
 Chicago     1400
 New York    1300
 Portland     750
@@ -82,24 +73,21 @@ Chicago      NaN
 New York    2600 <-- the two instances of New York are added together. 
 Portland     NaN
 dtype: float64
-
-****
+-----------------------------------
 
 DataFrame: Similar to a spreadsheet, database table/R's data.frame object. 
 - Group of Series objects that share an index (column names) 
 
 Default: alphabetically ordered 
 
-**Code**
-
+-----------------------------------
 data = {'year': [2010, 2011, 2012, 2011, 2012, 2010, 2011, 2012],
         'team': ['Bears', 'Bears', 'Bears', 'Packers', 'Packers', 'Lions', 'Lions', 'Lions'],
         'wins': [11, 8, 10, 15, 11, 6, 10, 4],
         'losses': [5, 8, 6, 1, 5, 10, 6, 12]}
 football = pd.DataFrame(data, columns=['year', 'team', 'wins', 'losses'])
 football
-
-****
+-----------------------------------
 
 - Code displays a table, numbered 0-(size-1)
 - Columns labeled with the data above. 
