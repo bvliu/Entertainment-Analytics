@@ -49,8 +49,6 @@ Another way to create table:
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 AUTO_INCREMENT=1 ;
 
-
-
 To display tables in the database:
 show tables;
 
@@ -59,6 +57,28 @@ describe 'tablename';
 
 To show all the data in the table:
 select * from 'tablename';
+
+To sort the data in the wanted column:
+select * from 'tablename' order by 'column name';
+
+To count the number of records in the column: 
+select count(*) from 'tablename'; 
+
+To output the columns with the given filter: 
+select * from 'tablename' where ____=____; 
+example: where rating=9
+where title="Finding Dory" (it will output the information for that) 
+
+** or, you can do where ____!=____; 
+
+To delete from the table: 
+delete from 'tablename' where _____=______; 
+example: 
+delete from movietable where title="Finding Dory"; 
+
+WILDCARD (select names/titles/etc with the starting letters) 
+select * from 'tablename' where 'columnname' like "v%"; 
+- This will output the (titles) that begins with "v" (put % next to the letter) 
 
 Insert example:
 insert into books (Title, SeriesID, AuthorID)
