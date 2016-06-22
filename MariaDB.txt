@@ -90,3 +90,17 @@ update books set Title = "The Hobbit" where BookID = 7;
 
 
 
+These are the possible data columns that can be scraped from BoxOfficeMojo
+Title
+URL
+Domestic Total Gross
+Distributor (e.g. Fox Searchlight)
+Genre
+MPAA Rating
+Release Date
+Runtime
+Production Budget
+
+
+
+

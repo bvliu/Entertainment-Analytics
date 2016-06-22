@@ -30,13 +30,14 @@ def getMovieURLs():
 
 	# Keep track of the current page
 	currentPage = 0
-
+#
 	# URL that will be edited 
 	url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=2015&p=.htm"
 
 	# Create the list
 	urlList = []
 
+	# Want to find every movie url for the given year
 	while True:
 		currentPage += 1
 		url = url.replace("?page=" + str(currentPage - 1), "?page=" + str(currentPage))
@@ -59,17 +60,23 @@ def getMovieURLs():
 			# if movies is in the link then it's the one we're looking for,
 			# not ref = ft is a special case that we don't want to be in the list
 			if 'movies' in name and 'ref=ft' not in name: 
-				urlList.append(bom + name) # Add it to the list, maybe should do some sorting here?
+				url = bom + name
+				urlList.append(url) # Add it to the list, maybe should do some sorting here?
+				scrapeDataFromMovie(url)
 
-	print (urlList)
+
+	#print (urlList)
 	putURLsIntoDatabase(urlList)
+
+def scrapeDataFromMovie(url):
+
 
 
 def putURLsIntoDatabase(myList):
 
 	connection = pymysql.connect(host = 'localhost', user = 'root',
 		password = 'pass', db = 'test', charset = 'utf8mb4',
-		cursorclass = pymysql.cursors.DictCursor)
+		cursorclass = pymysql.cursors.DictCursor) 
 
 	try:
 		with connection.cursor() as cursor:
@@ -84,16 +91,20 @@ def putURLsIntoDatabase(myList):
 
 		connection.commit()
 
-		with connection.cursor() as cursor:
-			sql = "SELECT * FROM `movies`"
-			cursor.execute(sql)
-			result = cursor.fetchall()
-			print(result[1]['id'])
-			print(result[1]['title'])
+		# Accessing data with a query: 
+		# with connection.cursor() as cursor:
+		# 	sql = "SELECT * FROM `movies`"
+		# 	cursor.execute(sql)
+		# 	result = cursor.fetchall()
+		# 	print(result[1]['id'])
+		# 	print(result[1]['title'])
 
+	# Close the connection
 	finally:
 		connection.close()
 
 
-getMovieURLs()
 
+
+
+getMovieURLs()
