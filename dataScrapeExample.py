@@ -1,6 +1,8 @@
 #This is a good vid to watch! 
 #https://www.youtube.com/watch?v=BCJ4afDX4L4
 
+#*****Still working on this file to change the example to get movie titles*****
+
 from bs4 import BeautifulSoup 
 import urllib2
 
