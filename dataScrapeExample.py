@@ -32,9 +32,9 @@ for row in tableStats.findAll('tr') [2:]:
        		#You want the TEXT of the link (the name or movie title
        		
 		name = col[1]
-		print(name)
+		
 		f.write(name.a.getText()+ "\n") 
-		print("after")
+	
 
 		#One player on each output
                    
