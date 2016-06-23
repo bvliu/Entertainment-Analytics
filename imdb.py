@@ -16,6 +16,7 @@ json_obj=json.loads(text)
 
 print(json_obj['Title'])
 print(json_obj['imdbRating'])
+#You can continue to add more print statements to access specific data. 
 #Or you can print to a text file
 #Next step... loop?  
 
