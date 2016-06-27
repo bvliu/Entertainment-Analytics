@@ -4,7 +4,7 @@ import urllib.request
 import re
 from datetime import datetime
 
-url = "http://www.boxofficemojo.com/movies/?id=willieandphil.htm"
+url = "http://www.boxofficemojo.com/movies/?id=elizabeth%A0.htm"
 #url = "http://www.boxofficemojo.com/movies/?id=madtiger.htm"
 
 with urllib.request.urlopen(url) as response:

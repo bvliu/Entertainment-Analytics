@@ -5,8 +5,8 @@ import urllib.request
 import pymysql.cursors
 import re
 
-
-BASE_YEAR = "1980"
+#BASE_YEAR = "1980"
+BASE_YEAR = "2015"
 CURRENT_YEAR = "2016"
 
 
@@ -29,7 +29,7 @@ def baseScrapingLoop():
 
 			# List of the (year) top grossing films, which will be parsed for the URLs
 			url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=1980&p=.htm"
-			url = url.replace('yr=' + str(year-1), 'yr=' + str(year))
+			url = url.replace('yr=1980', 'yr=' + str(year))
 			print (str(year))
 
 			# Now, when the “with” statement is executed, Python evaluates the expression, 
@@ -85,31 +85,38 @@ def scrapeMoviesFromYear(url, connection):
 
 			# if movies is in the link then it's the one we're looking for,
 			# not ref = ft is a special case that we don't want to be in the list
-			if 'movies' in name and 'ref=ft' not in name: 
+			if '/movies/' in name and 'ref=ft' not in name: 
 				movieurl = BOM + name
 				scrapeDataFromMovie(movieurl, connection)
 
 
 def scrapeDataFromMovie(url, connection):
 
-	with urllib.request.urlopen(url) as response:
+	print (url)
+	try:
+		with urllib.request.urlopen(url) as response:
 
-		# gets the raw html code from the URL
-		html = response.read()
-		#print (html)
+			# gets the raw html code from the URL
+			html = response.read()
+			#print (html)
 
-		# Use Beautiful Soup to organize the html into a more readable way
-		soup = BeautifulSoup(html, 'html.parser')
-		#print (soup.encode("utf-8"))
+			# Use Beautiful Soup to organize the html into a more readable way
+			soup = BeautifulSoup(html, 'html.parser')
+			#print (soup.encode("utf-8"))
 
-		readStaticData(soup.find_all('b'), connection)
-
+			readStaticData(soup.find_all('b'), connection)
+	except (urllib.error.HTTPError, UnicodeEncodeError, IndexError):
+		return
 
 def readStaticData(info, connection):
 	# 1 = title
 
-	title = info[1].getText()
+	try:
+		title = info[1].getText()
+	except IndexError:
+		return
 	print ("Title: " + title)
+
 
 	# 2 = domestic total as of some date
 	# Comes in this format: $141,319,928, needs to be made an int
@@ -136,10 +143,14 @@ def readStaticData(info, connection):
 		release = datetime.strptime(release, "%B %d %Y")
 		release = release.strftime("%Y-%m-%d")
 	except ValueError:
-		if len(release) == 4:
+		if release == 'N/A': # If the date format is N/A
+			release = None
+		elif len(release) == 4: # If the date format is only the year
 			release = release + '-01-01'
-
-	print ("Release Date: " + release)
+		elif len(release) > 4: # If the date format is the month then the year (June 1981)
+			release = datetime.strptime(release, "%B %Y")
+			release = release.strftime("%Y-%m-01")
+	print ("Release Date: " + str(release))
 
 	# 5 = Genre
 
