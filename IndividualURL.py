@@ -4,8 +4,8 @@ import urllib.request
 import re
 from datetime import datetime
 
-url = "http://www.boxofficemojo.com/movies/?id=slumdogmillionaire.htm"
-#url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=2015&p=.htm"
+url = "http://www.boxofficemojo.com/movies/?id=willieandphil.htm"
+#url = "http://www.boxofficemojo.com/movies/?id=madtiger.htm"
 
 with urllib.request.urlopen(url) as response:
 
@@ -19,11 +19,11 @@ soup = BeautifulSoup(html, 'html.parser')
 
 # BETTER WAY TO DO IT:
 info = soup.find_all('b')
-# x = 0
-# for item in info:
-# 	print (item.encode('utf-8'))
-# 	print (str(x) + " " + item.getText())
-# 	x+=1
+x = 0
+for item in info:
+	print (item.encode('utf-8'))
+	print (str(x) + " " + item.getText())
+	x+=1
 
 def readStaticData():
 	# 1 = title
@@ -38,6 +38,9 @@ def readStaticData():
 	total = int(total)
 	print ("Domestic Total Gross: " + str(total))
 
+	if "Domestic Lifetime Gross" in info[3].getText():
+		del info[3]
+
 	# 3 = distributor
 
 	distributor = info[3].getText()
@@ -46,11 +49,15 @@ def readStaticData():
 	# 4 = release date
 
 	release = info[4].getText()
-	print ("Release Date: " + release)
-	release = re.sub("[,]","",release)
-	print (release)
-	release = datetime.strptime(release, "%B %d %Y")
-	print(release.strftime("%Y-%m-%d"))
+	try:
+		print ("Release Date: " + release)
+		release = re.sub("[,]","",release)
+		print (release)
+		release = datetime.strptime(release, "%B %d %Y")
+		print(release.strftime("%Y-%m-%d"))
+	except ValueError:
+		if len(release) == 4:
+			release = release + '-01-01'
 
 
 	# 5 = Genre
@@ -62,8 +69,10 @@ def readStaticData():
 
 	runtime = info[6].getText()
 	print(runtime)
-	runtime = runtime.split(' ')
-	print(runtime)
+	temp = runtime.split(' ')
+	runtime = temp[0] + " " +temp[2]
+	runtime = datetime.strptime(runtime, "%H %M")
+	runtime = runtime.strftime("%H:%M:00")	
 
 	print ("Runtime: " + runtime)
 
@@ -75,6 +84,10 @@ def readStaticData():
 	# 8 = Production Budget
 
 	budget = info[8].getText()
+	print (budget)
+	if budget != 'N/A':
+		budget = budget.strip('$')
+		budget = str(int(budget.replace ('million', '')) * 1000000)
 	print ("Production Budget: " + budget)
 
 readStaticData()

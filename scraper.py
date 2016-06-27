@@ -1,8 +1,10 @@
 from bs4 import BeautifulSoup
+from datetime import datetime
 import urllib.parse
 import urllib.request
 import pymysql.cursors
 import re
+
 
 BASE_YEAR = "1980"
 CURRENT_YEAR = "2016"
@@ -17,33 +19,45 @@ def baseScrapingLoop():
 	# Make sure we start off with a blank SQL database CHANGE THIS LATER
 	emptyTable()
 
-	# Loop through each year starting from the first year (1980) to the current year, set above
-	for year in range(int(BASE_YEAR), int(CURRENT_YEAR) + 1):
+	connection = pymysql.connect(host = 'localhost', user = 'root',
+	password = 'pass', db = 'test', charset = 'utf8mb4',
+	cursorclass = pymysql.cursors.DictCursor) 
 
-		# List of the (year) top grossing films, which will be parsed for the URLs
-		url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=1980&p=.htm"
+	try:
+		# Loop through each year starting from the first year (1980) to the current year, set above
+		for year in range(int(BASE_YEAR), int(CURRENT_YEAR) + 1):
 
-		# Now, when the “with” statement is executed, Python evaluates the expression, 
-		# calls the __enter__ method on the resulting value (which is called a 
-		# “context guard”), and assigns whatever __enter__ returns to the variable 
-		# given by as. Python will then execute the code body, and no matter what 
-		# happens in that code, call the guard object’s __exit__ method.
-		with urllib.request.urlopen(url) as response:
+			# List of the (year) top grossing films, which will be parsed for the URLs
+			url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=1980&p=.htm"
+			url = url.replace('yr=' + str(year-1), 'yr=' + str(year))
+			print (str(year))
 
-			# gets the raw html code from the URL
-			html = response.read()
-			#print (html)
+			# Now, when the “with” statement is executed, Python evaluates the expression, 
+			# calls the __enter__ method on the resulting value (which is called a 
+			# “context guard”), and assigns whatever __enter__ returns to the variable 
+			# given by as. Python will then execute the code body, and no matter what 
+			# happens in that code, call the guard object’s __exit__ method.
+			with urllib.request.urlopen(url) as response:
 
-		# Use Beautiful Soup to organize the html into a more readable way
-		soup = BeautifulSoup(html)
-		organized = soup.prettify() 	
-		#print(organized)	
+				# gets the raw html code from the URL
+				html = response.read()
+				#print (html)
 
-		scrapeMoviesFromYear(url)
+			# Use Beautiful Soup to organize the html into a more readable way
+			soup = BeautifulSoup(html)
+			organized = soup.prettify() 	
+			#print(organized)	
+
+			scrapeMoviesFromYear(url, connection)
+
+		connection.commit()
+
+	finally:
+		connection.close()
 
 
 # Iterate through each of the individual pages under the year, 0-100 101-200 etc.
-def scrapeMoviesFromYear(url):
+def scrapeMoviesFromYear(url, connection):
 
 	# Keep track of the current page
 	currentPage = 0
@@ -52,7 +66,8 @@ def scrapeMoviesFromYear(url):
 	while True:
 		currentPage += 1
 		url = url.replace("?page=" + str(currentPage - 1), "?page=" + str(currentPage))
-		#print (url)
+		print (url)
+		print (str(currentPage))
 
 		with urllib.request.urlopen(url) as response:	
 			html = response.read()
@@ -71,11 +86,11 @@ def scrapeMoviesFromYear(url):
 			# if movies is in the link then it's the one we're looking for,
 			# not ref = ft is a special case that we don't want to be in the list
 			if 'movies' in name and 'ref=ft' not in name: 
-				url = bom + name
-				scrapeDataFromMovie(url)
+				movieurl = BOM + name
+				scrapeDataFromMovie(movieurl, connection)
 
 
-def scrapeDataFromMovie(url):
+def scrapeDataFromMovie(url, connection):
 
 	with urllib.request.urlopen(url) as response:
 
@@ -87,10 +102,10 @@ def scrapeDataFromMovie(url):
 		soup = BeautifulSoup(html, 'html.parser')
 		#print (soup.encode("utf-8"))
 
-		readStaticData(soup.find_all('b'))
+		readStaticData(soup.find_all('b'), connection)
 
 
-def readStaticData(info):
+def readStaticData(info, connection):
 	# 1 = title
 
 	title = info[1].getText()
@@ -99,8 +114,13 @@ def readStaticData(info):
 	# 2 = domestic total as of some date
 	# Comes in this format: $141,319,928, needs to be made an int
 
-	total = int(re.sub('[$,]', '', info[2].getText()))
+	total = info[2].getText().replace(' ', '')
+	total = total.replace('(Estimate)', '')
+	total = int(re.sub('[$,]', '', total))
 	print ("Domestic Total Gross: " + str(total))
+
+	if "Domestic Lifetime Gross" in info[3].getText():
+		del info[3]
 
 	# 3 = distributor
 
@@ -110,9 +130,15 @@ def readStaticData(info):
 	# 4 = release date
 	# Format Release Date: November 12, 2008 needs to be in yyyy-mm-dd
 
-	release = re.sub("[,]", "", info[4].getText())
-	release = datetime.strptime(release, "%B %d %Y")
-	release = release.strftime("%Y-%m-%d")
+	release = info[4].getText()
+	try:
+		release = re.sub("[,]", "", release)
+		release = datetime.strptime(release, "%B %d %Y")
+		release = release.strftime("%Y-%m-%d")
+	except ValueError:
+		if len(release) == 4:
+			release = release + '-01-01'
+
 	print ("Release Date: " + release)
 
 	# 5 = Genre
@@ -121,9 +147,16 @@ def readStaticData(info):
 	print ("Genre: " + genre)
 
 	# 6 = Runtime
-
+	# format 2 hrs. 0 min. -> 02:00:00
 	runtime = info[6].getText()
-	print ("Runtime: " + runtime)
+	if runtime != 'N/A':
+		temp = runtime.split(' ')
+		runtime = temp[0] + " " +temp[2]
+		runtime = datetime.strptime(runtime, "%H %M")
+		runtime = runtime.strftime("%H:%M:00")	
+	else: 
+		runtime = None
+	print ("Runtime: " + str(runtime))
 
 	# 7 = Rating
 
@@ -133,47 +166,20 @@ def readStaticData(info):
 	# 8 = Production Budget
 
 	budget = info[8].getText()
-	print ("Production Budget: " + budget)
-
-	connection = pymysql.connect(host = 'localhost', user = 'root',
-		password = 'pass', db = 'test', charset = 'utf8mb4',
-		cursorclass = pymysql.cursors.DictCursor) 
-
-	try:
-		with connection.cursor() as cursor:
-			sql = "INSERT INTO" `movies` ()
+	if budget != 'N/A':
+		budget = re.sub("[$,]", "", budget)
+		if 'million' in budget:
+			budget = str(int(float(budget.replace ('million', '')) * 1000000))
+	else:
+		budget = None
+	print ("Budget: " + str(budget))
 
 
-def putURLsIntoDatabase(myList):
-
-	connection = pymysql.connect(host = 'localhost', user = 'root',
-		password = 'pass', db = 'test', charset = 'utf8mb4',
-		cursorclass = pymysql.cursors.DictCursor) 
-
-	try:
-		with connection.cursor() as cursor:
-			# Clears the table
-			sql = "TRUNCATE `movies`"
-			cursor.execute(sql)
-
-			#Ready to reinsert values into the table
-			sql = "INSERT INTO `movies` (`title`) VALUES (%s)"
-			for movie in myList:
-				cursor.execute(sql, movie)
-
-		connection.commit()
-
-		# Accessing data with a query: 
-		# with connection.cursor() as cursor:
-		# 	sql = "SELECT * FROM `movies`"
-		# 	cursor.execute(sql)
-		# 	result = cursor.fetchall()
-		# 	print(result[1]['id'])
-		# 	print(result[1]['title'])
-
-	# Close the connection
-	finally:
-		connection.close()
+	with connection.cursor() as cursor:
+		sql = 'INSERT INTO `movies` (`title`, `domestic_gross`, `distributor`, `release_date`, `genre`, `run_time`, `rating`, `production_budget`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+		cursor.execute(sql, (title, total, distributor, release, genre, runtime, rating, budget))
+		print ('Success')
+	connection.commit()
 
 
 def emptyTable():
@@ -190,8 +196,4 @@ def emptyTable():
 	finally:
 		connection.close()
 
-
-
-
-
-baseUrlLoop()
+baseScrapingLoop()
