@@ -5,6 +5,8 @@ import urllib.request
 import pymysql.cursors
 import re
 
+# ------------------------------------BOX OFFICE MOJO SCRAPER---------------------------------------------
+
 #BASE_YEAR = "1980"
 BASE_YEAR = "1980"
 CURRENT_YEAR = "2016"
