@@ -6,7 +6,7 @@ import pymysql.cursors
 import re
 
 #BASE_YEAR = "1980"
-BASE_YEAR = "2015"
+BASE_YEAR = "1980"
 CURRENT_YEAR = "2016"
 
 
@@ -17,7 +17,7 @@ BOM = "http://www.boxofficemojo.com"
 def baseScrapingLoop():
 
 	# Make sure we start off with a blank SQL database CHANGE THIS LATER
-	emptyTable()
+	#emptyTable()
 
 	connection = pymysql.connect(host = 'localhost', user = 'root',
 	password = 'pass', db = 'test', charset = 'utf8mb4',
@@ -92,7 +92,7 @@ def scrapeMoviesFromYear(url, connection):
 
 def scrapeDataFromMovie(url, connection):
 
-	print (url)
+	#print (url)
 	try:
 		with urllib.request.urlopen(url) as response:
 
@@ -124,7 +124,7 @@ def readStaticData(info, connection):
 	total = info[2].getText().replace(' ', '')
 	total = total.replace('(Estimate)', '')
 	total = int(re.sub('[$,]', '', total))
-	print ("Domestic Total Gross: " + str(total))
+	#print ("Domestic Total Gross: " + str(total))
 
 	if "Domestic Lifetime Gross" in info[3].getText():
 		del info[3]
@@ -132,7 +132,7 @@ def readStaticData(info, connection):
 	# 3 = distributor
 
 	distributor = info[3].getText()
-	print ("Distributor: " + distributor)
+	#print ("Distributor: " + distributor)
 
 	# 4 = release date
 	# Format Release Date: November 12, 2008 needs to be in yyyy-mm-dd
@@ -155,7 +155,7 @@ def readStaticData(info, connection):
 	# 5 = Genre
 
 	genre = info[5].getText()
-	print ("Genre: " + genre)
+	#print ("Genre: " + genre)
 
 	# 6 = Runtime
 	# format 2 hrs. 0 min. -> 02:00:00
@@ -167,12 +167,12 @@ def readStaticData(info, connection):
 		runtime = runtime.strftime("%H:%M:00")	
 	else: 
 		runtime = None
-	print ("Runtime: " + str(runtime))
+	#print ("Runtime: " + str(runtime))
 
 	# 7 = Rating
 
 	rating = info[7].getText()
-	print ("Rating: " + rating) 
+	#print ("Rating: " + rating) 
 
 	# 8 = Production Budget
 
@@ -183,13 +183,19 @@ def readStaticData(info, connection):
 			budget = str(int(float(budget.replace ('million', '')) * 1000000))
 	else:
 		budget = None
-	print ("Budget: " + str(budget))
+	#print ("Budget: " + str(budget))
 
 
 	with connection.cursor() as cursor:
-		sql = 'INSERT INTO `movies` (`title`, `domestic_gross`, `distributor`, `release_date`, `genre`, `run_time`, `rating`, `production_budget`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
-		cursor.execute(sql, (title, total, distributor, release, genre, runtime, rating, budget))
-		print ('Success')
+		sql = ("INSERT INTO `movies` (`title`, `domestic_gross`, `distributor`, "
+			"`release_date`, `genre`, `run_time`, `rating`, `production_budget`) " 
+			"VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE "
+			"`domestic_gross`=%s, `distributor`=%s, `release_date`=%s, `genre`=%s,"
+			" `run_time`=%s, `rating`=%s, `production_budget`=%s")
+		#print (sql)
+		cursor.execute(sql, (title, total, distributor, release, genre, runtime, rating, 
+			budget, total, distributor, release, genre, runtime, rating, budget))
+		#print ('Success')
 	connection.commit()
 
 
