@@ -7,22 +7,23 @@ import re
 
 # ------------------------------------BOX OFFICE MOJO SCRAPER---------------------------------------------
 
-#BASE_YEAR = "1980"
 BASE_YEAR = "1980"
 CURRENT_YEAR = "2016"
 
-
 # General http address for Box Office Mojo
 BOM = "http://www.boxofficemojo.com"
+
+# Keep track of primary keys for the time sensitive table
+CURRENT_TITLE = ""
 
 # Iterate through every year
 def baseScrapingLoop():
 
 	# Make sure we start off with a blank SQL database CHANGE THIS LATER
-	#emptyTable()
+	#emptyTable('movie_master')
 
 	connection = pymysql.connect(host = 'localhost', user = 'root',
-	password = 'pass', db = 'test', charset = 'utf8mb4',
+	password = 'pass', db = 'entertainment_analytics', charset = 'utf8mb4',
 	cursorclass = pymysql.cursors.DictCursor) 
 
 	try:
@@ -89,12 +90,15 @@ def scrapeMoviesFromYear(url, connection):
 			# not ref = ft is a special case that we don't want to be in the list
 			if '/movies/' in name and 'ref=ft' not in name: 
 				movieurl = BOM + name
-				scrapeDataFromMovie(movieurl, connection)
+				scrapeDataMovieMaster(movieurl, connection)
+				readTableData(movieurl, connection)
 
-
-def scrapeDataFromMovie(url, connection):
+def scrapeDataMovieMaster(url, connection):
 
 	#print (url)
+
+	# Try to scrape the data and if there are any errors then skip
+	# Errors include http and encoding errors for opening the html
 	try:
 		with urllib.request.urlopen(url) as response:
 
@@ -111,11 +115,14 @@ def scrapeDataFromMovie(url, connection):
 		return
 
 def readStaticData(info, connection):
+
+	# Need try-except because sometimes the information is not there
 	# 1 = title
 
 	try:
 		title = info[1].getText()
 	except IndexError:
+		print ('IndexError')
 		return
 	print ("Title: " + title)
 
@@ -189,30 +196,142 @@ def readStaticData(info, connection):
 
 
 	with connection.cursor() as cursor:
-		sql = ("INSERT INTO `movies` (`title`, `domestic_gross`, `distributor`, "
+		sql = (
+			"INSERT INTO `movies_master` (`title`, `domestic_gross`, `distributor`, "
 			"`release_date`, `genre`, `run_time`, `rating`, `production_budget`) " 
 			"VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE "
 			"`domestic_gross`=%s, `distributor`=%s, `release_date`=%s, `genre`=%s,"
-			" `run_time`=%s, `rating`=%s, `production_budget`=%s")
+			" `run_time`=%s, `rating`=%s, `production_budget`=%s"
+			)
 		#print (sql)
 		cursor.execute(sql, (title, total, distributor, release, genre, runtime, rating, 
 			budget, total, distributor, release, genre, runtime, rating, budget))
 		#print ('Success')
 	connection.commit()
 
+	global CURRENT_TITLE
+	CURRENT_TITLE = title
 
-def emptyTable():
+def readTableData(url, connection):
+
+	PRIMARY_ID = 1
+	
+	# print (url)
+	tableurl = "http://www.boxofficemojo.com/movies/?page=weekend&id=insertidhere.htm"
+	movieid = url[39:-4]
+	tableurl = tableurl.replace("=insertidhere", movieid)
+	# print (tableurl)
+
+	try:
+		with urllib.request.urlopen(tableurl) as response:
+
+			html = response.read()
+			#print (html)
+
+		soup = BeautifulSoup(html, 'html.parser')
+		#print (soup.prettify().encode('utf-8'))
+
+		# The tables are separated by year, so we need to keep
+		# track of the different years each row is about
+		yearList = []
+		yearIndex = 0
+		for font in soup.find_all('font', size="5", face="Verdana"):
+			year = str(font.getText().encode('utf-8')).strip('b').strip("'")
+			yearList.append(year)
+
+		#print (soup.find_all('table')[2].prettify().encode('utf-8'))
+		for tr in soup.find_all('table')[2].find_all('tr')[8:]:
+
+			# Fix a bug where the table row is skipped for some reason
+			if 'Date(' in tr.getText():
+				yearIndex+=1
+				try:
+					year = yearList[yearIndex]
+				except IndexError:
+					year = yearList[yearIndex-1]
+				continue
+
+			#print (tr.getText().encode('utf-8'))
+			tds = tr.find_all('td')
+
+			# DATE - Encoded weirdly 
+			date = str(tds[0].getText().encode('utf-8')).strip('b').strip("'").replace("\\xc2\\x96", " - ") 
+
+			# RANK
+			rank = tds[1].getText().strip('b').strip("'").replace(',','')
+			if rank == '-':
+				rank = None
+
+			# Weekend Gross
+			weekend_gross = tds[2].getText().strip('b').strip("'").strip('$').replace(',','')
+
+			# Change
+			change = tds[3].getText().strip('b').strip("'").replace(',','')
+			if change == '-':
+				change = '0'
+
+			# Theaters
+			theaters = tds[4].getText().strip('b').strip("'").replace(',','')
+
+			# Change in Theaters
+			change_theaters = tds[5].getText().strip('b').strip("'").replace(',','')
+			if change_theaters == '-':
+				change_theaters = '0'
+
+			# Average 
+			average = tds[6].getText().strip('b').strip("'").strip('$').replace(',','')
+
+			# Gross
+			gross = tds[7].getText().strip('b').strip("'").strip('$').replace(',','')
+			if gross == '-':
+				gross = None
+
+			# Week
+			week = tds[8].getText().strip('b').strip("'")
+
+			print (
+				"ID: %s, Title: %s, Year: %s, Date: %s, Rank: %s, Weekend Gross: %s, Change: %s, "
+				"Theaters: %s, Change: %s, Average: %s, Gross to date: %s, Week #: %s"
+				% (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekend_gross, change, 
+					theaters, change_theaters, average, gross, week))
+
+
+			with connection.cursor() as cursor:
+				sql = (
+					"INSERT INTO `time_sensitive` (`id`, `title`, `year`, `date`, `rank`, `weekend_gross`, "
+					"`change_wg`, `theaters`, `change_theaters`, `average`, `gross_to_date`, `week`) "
+					"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+					"ON DUPLICATE KEY UPDATE `year`=%s, `date`=%s, `rank`=%s, `weekend_gross`=%s, `change_wg`=%s, "
+					"`theaters`=%s, `change_theaters`=%s, `average`=%s, `gross_to_date`=%s, `week`=%s"
+					)
+				#print (sql)
+				cursor.execute(sql, (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekend_gross, 
+					change, theaters, change_theaters, average, gross, week, year, date, rank, 
+					weekend_gross, change, theaters, change_theaters, average, gross, week))
+				# print ('Success')
+			connection.commit()
+
+			# Increment primary id
+			PRIMARY_ID+=1
+
+	except Exception as e:
+		print (type(e))
+		print (e)
+		return
+
+
+def emptyTable(table):
 	connection = pymysql.connect(host = 'localhost', user = 'root',
-	password = 'pass', db = 'test', charset = 'utf8mb4',
+	password = 'pass', db = 'entertainment_analytics', charset = 'utf8mb4',
 	cursorclass = pymysql.cursors.DictCursor) 
 
 	try:
 		with connection.cursor() as cursor:
 			# Clears the table
-			sql = "TRUNCATE `movies`"
+			sql = "TRUNCATE `" + table + "`"
 			cursor.execute(sql)
 		connection.commit()
 	finally:
-		connection.close()
+		connection.close()	
 
 baseScrapingLoop()
