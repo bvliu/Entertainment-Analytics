@@ -9,7 +9,7 @@ CURRENT_TITLE = ""
 PRIMARY_ID = 1
 
 
-url = "http://www.boxofficemojo.com/movies/?page=weekend&id=starwars7.htm"
+url = "http://www.boxofficemojo.com/movies/?id=likeforlikes.htm"
 with urllib.request.urlopen(url) as response:
 
 	# gets the raw html code from the URL
@@ -33,6 +33,7 @@ def readStaticData():
 
 	total = info[2].getText()
 	total = re.sub('[$,]','',total)
+	total = total.replace('(Estimate)', '')
 	total = int(total)
 	#print ("Domestic Total Gross: " + str(total))
 
@@ -85,15 +86,15 @@ def readStaticData():
 	#print (budget)
 	if budget != 'N/A':
 		budget = budget.strip('$')
-		budget = str(int(budget.replace ('million', '')) * 1000000)
+		budget = str(float(budget.replace ('million', '')) * 1000000)
 	#print ("Production Budget: " + budget)
 
 readStaticData()
 
 def readTableData():
 	try:
-		tableurl = "http://www.boxofficemojo.com/movies/?page=weekend&id=insertidhere.htm"
-		movieid = url.strip('.htm').strip("http://www.boxofficemojo.com/movies/?id")
+		tableurl = "http://www.boxofficemojo.com/movies/?page=weekly&id=insertidhere.htm"
+		movieid = url[39:-4]
 		tableurl = tableurl.replace("=insertidhere", movieid)
 		print (tableurl)
 
@@ -103,15 +104,20 @@ def readTableData():
 			#print (html)
 
 		soup = BeautifulSoup(html, 'html.parser')
+
+		if "NO WEEKLY DATA AVAILABLE" in str(html):
+			print ("No Data Available")
+			return
+
 		#print (soup.prettify().encode('utf-8'))
 
 		# print (soup.find_all('table')[2].prettify().encode('utf-8'))
 
-		# x = 0
-		# for tr in soup.find_all('table')[2].find_all('tr'):
-		# 	print (x)
-		# 	x+=1
-		# 	print(tr.getText().encode('utf-8'))
+		x = 0
+		for tr in soup.find_all('table')[2].find_all('tr'):
+			print (x)
+			x+=1
+			print(tr.getText().encode('utf-8'))	
 
 		yearList = []
 		yearIndex = 0
@@ -120,13 +126,19 @@ def readTableData():
 			print (year)
 			yearList.append(year)
 
+		year = yearList[yearIndex]
+
 		print (yearList)
 		for tr in soup.find_all('table')[2].find_all('tr')[8:]:
 
-			if 'Date(' in tr.getText():
+			found = "b'Date(click to view chart)RankWeekendGross%ChangeTheatersChange / Avg.Gross-to-DateWeek#'"
+
+			if found in str(tr.getText().encode('utf-8')):
 				yearIndex+=1
 				year = yearList[yearIndex]
 				continue
+
+			print (year)
 
 			tds = tr.find_all('td')
 			date = str(tds[0].getText().encode('utf-8')).strip('b').strip("'").replace("\\xc2\\x96", " - ") #date is encoded weirdly

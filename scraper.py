@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import http
 import urllib.parse
 import urllib.request
 import pymysql.cursors
@@ -7,7 +8,7 @@ import re
 
 # ------------------------------------BOX OFFICE MOJO SCRAPER---------------------------------------------
 
-BASE_YEAR = "1980"
+BASE_YEAR = "2016"
 CURRENT_YEAR = "2016"
 
 # General http address for Box Office Mojo
@@ -111,7 +112,9 @@ def scrapeDataMovieMaster(url, connection):
 			#print (soup.encode("utf-8"))
 
 			readStaticData(soup.find_all('b'), connection)
-	except (urllib.error.HTTPError, UnicodeEncodeError, IndexError):
+	except (urllib.error.HTTPError, http.client.IncompleteRead, UnicodeEncodeError, IndexError, Exception) as e:
+		print ("baseScrapingLoop error" + str(type(e)))
+		print (e)
 		return
 
 def readStaticData(info, connection):
@@ -217,7 +220,7 @@ def readTableData(url, connection):
 	PRIMARY_ID = 1
 	
 	# print (url)
-	tableurl = "http://www.boxofficemojo.com/movies/?page=weekend&id=insertidhere.htm"
+	tableurl = "http://www.boxofficemojo.com/movies/?page=weekly&id=insertidhere.htm"
 	movieid = url[39:-4]
 	tableurl = tableurl.replace("=insertidhere", movieid)
 	# print (tableurl)
@@ -228,6 +231,10 @@ def readTableData(url, connection):
 			html = response.read()
 			#print (html)
 
+		if "NO WEEKLY DATA AVAILABLE" in str(html):
+			print ("No Data Available")
+			return
+
 		soup = BeautifulSoup(html, 'html.parser')
 		#print (soup.prettify().encode('utf-8'))
 
@@ -236,8 +243,12 @@ def readTableData(url, connection):
 		yearList = []
 		yearIndex = 0
 		for font in soup.find_all('font', size="5", face="Verdana"):
-			year = str(font.getText().encode('utf-8')).strip('b').strip("'")
-			yearList.append(year)
+			yearInfo = str(font.getText().encode('utf-8')).strip('b').strip("'")
+			if len(yearInfo) == 4:
+				yearList.append(yearInfo)
+
+		# Set the first year
+		year = yearList[yearIndex]
 
 		#print (soup.find_all('table')[2].prettify().encode('utf-8'))
 		for tr in soup.find_all('table')[2].find_all('tr')[8:]:
@@ -262,8 +273,8 @@ def readTableData(url, connection):
 			if rank == '-':
 				rank = None
 
-			# Weekend Gross
-			weekend_gross = tds[2].getText().strip('b').strip("'").strip('$').replace(',','')
+			# Weekly Gross
+			weekly_gross = tds[2].getText().strip('b').strip("'").strip('$').replace(',','').replace('(Estimate)','')
 
 			# Change
 			change = tds[3].getText().strip('b').strip("'").replace(',','')
@@ -272,17 +283,21 @@ def readTableData(url, connection):
 
 			# Theaters
 			theaters = tds[4].getText().strip('b').strip("'").replace(',','')
+			if theaters == '-':
+				theaters = None
 
 			# Change in Theaters
 			change_theaters = tds[5].getText().strip('b').strip("'").replace(',','')
 			if change_theaters == '-':
-				change_theaters = '0'
+				change_theaters = None
 
 			# Average 
 			average = tds[6].getText().strip('b').strip("'").strip('$').replace(',','')
+			if average == '-':
+				average = None
 
 			# Gross
-			gross = tds[7].getText().strip('b').strip("'").strip('$').replace(',','')
+			gross = tds[7].getText().strip('b').strip("'").strip('$').replace(',','').replace('(Estimate)','')
 			if gross == '-':
 				gross = None
 
@@ -290,24 +305,24 @@ def readTableData(url, connection):
 			week = tds[8].getText().strip('b').strip("'")
 
 			print (
-				"ID: %s, Title: %s, Year: %s, Date: %s, Rank: %s, Weekend Gross: %s, Change: %s, "
+				"ID: %s, Title: %s, Year: %s, Date: %s, Rank: %s, Weekly Gross: %s, Change: %s, "
 				"Theaters: %s, Change: %s, Average: %s, Gross to date: %s, Week #: %s"
-				% (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekend_gross, change, 
+				% (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekly_gross, change, 
 					theaters, change_theaters, average, gross, week))
 
 
 			with connection.cursor() as cursor:
 				sql = (
-					"INSERT INTO `time_sensitive` (`id`, `title`, `year`, `date`, `rank`, `weekend_gross`, "
+					"INSERT INTO `time_sensitive` (`id`, `title`, `year`, `date`, `rank`, `weekly_gross`, "
 					"`change_wg`, `theaters`, `change_theaters`, `average`, `gross_to_date`, `week`) "
 					"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-					"ON DUPLICATE KEY UPDATE `year`=%s, `date`=%s, `rank`=%s, `weekend_gross`=%s, `change_wg`=%s, "
+					"ON DUPLICATE KEY UPDATE `year`=%s, `date`=%s, `rank`=%s, `weekly_gross`=%s, `change_wg`=%s, "
 					"`theaters`=%s, `change_theaters`=%s, `average`=%s, `gross_to_date`=%s, `week`=%s"
 					)
 				#print (sql)
-				cursor.execute(sql, (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekend_gross, 
+				cursor.execute(sql, (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekly_gross, 
 					change, theaters, change_theaters, average, gross, week, year, date, rank, 
-					weekend_gross, change, theaters, change_theaters, average, gross, week))
+					weekly_gross, change, theaters, change_theaters, average, gross, week))
 				# print ('Success')
 			connection.commit()
 
@@ -315,7 +330,7 @@ def readTableData(url, connection):
 			PRIMARY_ID+=1
 
 	except Exception as e:
-		print (type(e))
+		print ("readTableData error " + str(type(e)))
 		print (e)
 		return
 
