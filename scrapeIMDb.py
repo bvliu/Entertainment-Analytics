@@ -14,13 +14,9 @@ for x in range(1,9000, 100):
 	tempURL+=str(x)
 	tempURL+='&view=detail&sort=listorian:asc'
 
-#print(tempURL)
-
 	r= urllib.request.urlopen(tempURL)
 
 	html=r.read()
-
-	#print (html)
 
 	soup=BeautifulSoup(html, "html.parser")
 	tableStats = soup.find("div", { "class" : "list detail"})
@@ -31,13 +27,13 @@ for x in range(1,9000, 100):
 
 		try:
 			name=row.getText()
-			#Prints Pulp Fiction 
+			#Prints Pulp Fiction
+
 			print(name)
 			name=name.replace("\n","")
 
 			if str(name)=="":
 				flag=1
-				#Print? 
 
 			if flag==1:		
 				if str(name)!="":	
@@ -46,7 +42,6 @@ for x in range(1,9000, 100):
 					flag=0	
 		except Exception as e: 
 			pass
-
 
 #Goes to the next 100 
 
