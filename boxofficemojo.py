@@ -349,4 +349,5 @@ def emptyTable(table):
 	finally:
 		connection.close()	
 
-baseScrapingLoop()
+if __name__ == '__main__':
+	baseScrapingLoop()
