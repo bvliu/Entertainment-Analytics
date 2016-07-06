@@ -38,6 +38,7 @@ while line:
 		out.write(json_obj['imdbID']+ "\t") 
 
 		id=json_obj['imdbID']
+		
 		#sets the id for later - prodIMDb.py 
 
 		url2="http://www.imdb.com/title/"
@@ -55,7 +56,7 @@ while line:
 		for row in tableStats.find_all('a'):
 
 			#***just testing *** 
-	
+
 			try:
 				name=row.getText()
 				name=name.replace("\n","")
@@ -65,14 +66,70 @@ while line:
 			except Exception as e: 
 				pass
 
-		out.write("\n")
+
+		#THIS IS THE RATINGS! 
+		urlR='http://www.imdb.com/title/'
+		urlR+=id
+		urlR+='/ratings?ref_=tt_ov_rt'
+
+		r= urllib.request.urlopen(urlR)
+		html=r.read()
+		soup=BeautifulSoup(html, "html.parser")
+
+		tableStats=soup.find("table", { "cellpadding" : "0"})
+
+		#---------------------------------------------------------
+		for row in tableStats.findAll('tr')[1:]:
+			#find all td
+			col=row.findAll('td')
+
+			try: 
+				#This prints out the number of people 
+				#print("\n"+ col[0].getText()) 
+				#^gets the number of people
+				out.write(col[1].getText()+"\t") 
+				
+				#print(col[1].getText())
+				#^gets the percentages 
+
+			except Exception as e: 
+				errorFile.write (str(x) + '************' + str(e) + '*************' + str(col) + '\n') 
+				pass 
+
+		#---------------------------------------------------------
+		#SECOND TABLE 
+
+		tableStats=soup.findAll("table", { "cellpadding" : "0"})[1]
+
+		for row in tableStats.findAll('tr')[1:]:
+			#find all td
+			col=row.findAll('td')
+
+			try: 
+				#This prints out the number of people 
+				print(col[0].getText())
+				out.write(col[0].getText() + "\t") 
+				#^gets the title
+				print(col[1].getText())
+				out.write(col[1].getText() + "\t")
+				#^gets the number of people
+				print(col[2].getText())
+				out.write(col[2].getText() + "\t")
+				#^gets the rating  
+
+			except Exception as e: 
+				errorFile.write (str(x) + '************' + str(e) + '*************' + str(col) + '\n') 
+				pass 
+
+		#AT THE END 
 
 	except Exception as e: 
 		print("Exception")
 		pass
 
+	out.write("\n")
 	line=f.readline()
 
-f.close() 
+f.close
 out.close
 error.close
