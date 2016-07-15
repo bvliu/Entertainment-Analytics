@@ -1,5 +1,8 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+from multiprocessing.dummy import Pool
+from multiprocessing import cpu_count
+from functools import partial
 import http
 import urllib.parse
 import urllib.request
@@ -14,54 +17,31 @@ CURRENT_YEAR = "2016"
 # General http address for Box Office Mojo
 BOM = "http://www.boxofficemojo.com"
 
+NUM_THREADS = cpu_count() * 2
+POOL = Pool(NUM_THREADS)
+
+MASTER_URLS = []
+
 # Keep track of primary keys for the time sensitive table
 CURRENT_TITLE = ""
 
-# Iterate through every year
-def baseScrapingLoop():
+def getURLs():
 
-	# Make sure we start off with a blank SQL database CHANGE THIS LATER
-	#emptyTable('movie_master')
+	years = []
 
-	connection = pymysql.connect(host = 'localhost', user = 'root',
-	password = 'pass', db = 'entertainment_analytics', charset = 'utf8mb4',
-	cursorclass = pymysql.cursors.DictCursor) 
+	# Loop through each year starting from the first year (1980) to the current year, set above
+	for year in range(int(BASE_YEAR), int(CURRENT_YEAR) + 1):
 
-	try:
-		# Loop through each year starting from the first year (1980) to the current year, set above
-		for year in range(int(BASE_YEAR), int(CURRENT_YEAR) + 1):
+		# List of the (year) top grossing films, which will be parsed for the URLs
+		url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=1980&p=.htm"
+		url = url.replace('yr=1980', 'yr=' + str(year))
+		#print (str(year))
+		years.append(url)
 
-			# List of the (year) top grossing films, which will be parsed for the URLs
-			url = "http://www.boxofficemojo.com/yearly/chart/?page=1&view=releasedate&view2=domestic&yr=1980&p=.htm"
-			url = url.replace('yr=1980', 'yr=' + str(year))
-			print (str(year))
-
-			# Now, when the “with” statement is executed, Python evaluates the expression, 
-			# calls the __enter__ method on the resulting value (which is called a 
-			# “context guard”), and assigns whatever __enter__ returns to the variable 
-			# given by as. Python will then execute the code body, and no matter what 
-			# happens in that code, call the guard object’s __exit__ method.
-			with urllib.request.urlopen(url) as response:
-
-				# gets the raw html code from the URL
-				html = response.read()
-				#print (html)
-
-			# Use Beautiful Soup to organize the html into a more readable way
-			soup = BeautifulSoup(html)
-			organized = soup.prettify() 	
-			#print(organized)	
-
-			scrapeMoviesFromYear(url, connection)
-
-		connection.commit()
-
-	finally:
-		connection.close()
-
+	POOL.map(scrapeMoviesFromYear, years)
 
 # Iterate through each of the individual pages under the year, 0-100 101-200 etc.
-def scrapeMoviesFromYear(url, connection):
+def scrapeMoviesFromYear(url):
 
 	# Keep track of the current page
 	currentPage = 0
@@ -70,11 +50,15 @@ def scrapeMoviesFromYear(url, connection):
 	while True:
 		currentPage += 1
 		url = url.replace("?page=" + str(currentPage - 1), "?page=" + str(currentPage))
-		print (url)
-		print (str(currentPage))
+		#print (url)
+		#print ("Page " + str(currentPage))
 
-		with urllib.request.urlopen(url) as response:	
-			html = response.read()
+		# Try to open the html and catch any exceptions doing so
+		try:
+			with urllib.request.urlopen(url) as response:	
+				html = response.read()
+		except Exception as e:
+			print ("scrapeMoviesFromYear: html request error " + str(type(e)) + str(e))
 
 		# base case, if we've reached the end of the pages then stop the loop
 		if "There was an error processing this request" in str(html):
@@ -91,12 +75,34 @@ def scrapeMoviesFromYear(url, connection):
 			# not ref = ft is a special case that we don't want to be in the list
 			if '/movies/' in name and 'ref=ft' not in name: 
 				movieurl = BOM + name
-				scrapeDataMovieMaster(movieurl, connection)
-				readTableData(movieurl, connection)
+				print(movieurl)
+				MASTER_URLS.append(movieurl)
 
-def scrapeDataMovieMaster(url, connection):
+# Iterate through every year
+def baseScrapingLoop():
 
-	#print (url)
+	# Make sure we start off with a blank SQL database CHANGE THIS LATER
+	#emptyTable('movie_master')
+
+	#try:
+
+		#func = partial(scrapeDataMovieMaster, connection = connection)
+	POOL.map(scrapeDataMovieMaster, MASTER_URLS)
+		# for url in MASTER_URLS:
+		# 	scrapeDataMovieMaster(url, connection)
+
+	# 	connection.commit()
+
+	# finally:
+	# 	connection.close()
+
+
+
+def scrapeDataMovieMaster(url):
+
+	connection = pymysql.connect(host = 'localhost', user = 'root',
+		password = 'pass', db = 'entertainment_analytics', charset = 'utf8mb4',
+		cursorclass = pymysql.cursors.DictCursor) 
 
 	# Try to scrape the data and if there are any errors then skip
 	# Errors include http and encoding errors for opening the html
@@ -110,12 +116,17 @@ def scrapeDataMovieMaster(url, connection):
 			# Use Beautiful Soup to organize the html into a more readable way
 			soup = BeautifulSoup(html, 'html.parser')
 			#print (soup.encode("utf-8"))
-
 			readStaticData(soup.find_all('b'), connection)
-	except (urllib.error.HTTPError, http.client.IncompleteRead, UnicodeEncodeError, IndexError, Exception) as e:
-		print ("baseScrapingLoop error" + str(type(e)))
+
+	except Exception as e:
+
+		print ("Error scraping movie data " + str(type(e)) + " " + url)
 		print (e)
 		return
+
+	finally:
+		connection.commit()
+		connection.close()
 
 def readStaticData(info, connection):
 
@@ -200,15 +211,10 @@ def readStaticData(info, connection):
 
 	with connection.cursor() as cursor:
 		sql = (
-			"INSERT INTO `movies_master` (`title`, `domestic_gross`, `distributor`, "
-			"`release_date`, `genre`, `run_time`, `rating`, `production_budget`) " 
-			"VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE "
-			"`domestic_gross`=%s, `distributor`=%s, `release_date`=%s, `genre`=%s,"
-			" `run_time`=%s, `rating`=%s, `production_budget`=%s"
+			"INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `title`=%s, `release_date`=%s"
 			)
 		#print (sql)
-		cursor.execute(sql, (title, total, distributor, release, genre, runtime, rating, 
-			budget, total, distributor, release, genre, runtime, rating, budget))
+		cursor.execute(sql, (title, release, title, release))
 		#print ('Success')
 	connection.commit()
 
@@ -350,4 +356,5 @@ def emptyTable(table):
 		connection.close()	
 
 if __name__ == '__main__':
+	getURLs()
 	baseScrapingLoop()
