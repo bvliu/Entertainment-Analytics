@@ -71,7 +71,7 @@ def scrapeMoviesFromYear(url):
 			# not ref = ft is a special case that we don't want to be in the list
 			if '/movies/' in name and 'ref=ft' not in name: 
 				movieurl = BOM + name
-				print(movieurl)
+				#print(movieurl)
 				MASTER_URLS.append(movieurl)
 
 # Iterate through every year
