@@ -11,19 +11,15 @@ import re
 
 # ------------------------------------BOX OFFICE MOJO SCRAPER---------------------------------------------
 
-BASE_YEAR = "2016"
+BASE_YEAR = "1980"
 CURRENT_YEAR = "2016"
 
 # General http address for Box Office Mojo
 BOM = "http://www.boxofficemojo.com"
 
-NUM_THREADS = cpu_count() * 2
-POOL = Pool(NUM_THREADS)
+POOL = Pool(cpu_count()*2)
 
 MASTER_URLS = []
-
-# Keep track of primary keys for the time sensitive table
-CURRENT_TITLE = ""
 
 def getURLs():
 
@@ -84,19 +80,7 @@ def baseScrapingLoop():
 	# Make sure we start off with a blank SQL database CHANGE THIS LATER
 	#emptyTable('movie_master')
 
-	#try:
-
-		#func = partial(scrapeDataMovieMaster, connection = connection)
 	POOL.map(scrapeDataMovieMaster, MASTER_URLS)
-		# for url in MASTER_URLS:
-		# 	scrapeDataMovieMaster(url, connection)
-
-	# 	connection.commit()
-
-	# finally:
-	# 	connection.close()
-
-
 
 def scrapeDataMovieMaster(url):
 
@@ -116,7 +100,7 @@ def scrapeDataMovieMaster(url):
 			# Use Beautiful Soup to organize the html into a more readable way
 			soup = BeautifulSoup(html, 'html.parser')
 			#print (soup.encode("utf-8"))
-			readStaticData(soup.find_all('b'), connection)
+			readStaticData(soup.find_all('b'), connection, url)
 
 	except Exception as e:
 
@@ -128,10 +112,10 @@ def scrapeDataMovieMaster(url):
 		connection.commit()
 		connection.close()
 
-def readStaticData(info, connection):
+def readStaticData(info, connection, url):
 
 	# Need try-except because sometimes the information is not there
-	# 1 = title
+	# 1 = title -------------------------------------------------------------------------------------------
 
 	try:
 		title = info[1].getText()
@@ -141,7 +125,7 @@ def readStaticData(info, connection):
 	print ("Title: " + title)
 
 
-	# 2 = domestic total as of some date
+	# 2 = domestic total ----------------------------------------------------------------------------------
 	# Comes in this format: $141,319,928, needs to be made an int
 
 	total = info[2].getText().replace(' ', '')
@@ -152,12 +136,12 @@ def readStaticData(info, connection):
 	if "Domestic Lifetime Gross" in info[3].getText():
 		del info[3]
 
-	# 3 = distributor
+	# 3 = distributor --------------------------------------------------------------------------------------
 
 	distributor = info[3].getText()
 	#print ("Distributor: " + distributor)
 
-	# 4 = release date
+	# 4 = release date --------------------------------------------------------------------------------------
 	# Format Release Date: November 12, 2008 needs to be in yyyy-mm-dd
 
 	release = info[4].getText()
@@ -173,14 +157,31 @@ def readStaticData(info, connection):
 		elif len(release) > 4: # If the date format is the month then the year (June 1981)
 			release = datetime.strptime(release, "%B %Y")
 			release = release.strftime("%Y-%m-01")
-	print ("Release Date: " + str(release))
+	#print ("Release Date: " + str(release))
 
-	# 5 = Genre
-
+	# 5 = Genre ----------------------------------------------------------------------------------------------
+ 
 	genre = info[5].getText()
 	#print ("Genre: " + genre)
+	genreString = [word.lower() for word in genre.replace('/','').replace('  ', ' ').split(' ')]
+	for index, word in enumerate(genreString):
+		if word == 'sci-fi':
+			genreString[index] = 'sci_fi'
+		elif word == 'historical':
+			genreString[index] = 'history'
+		elif word == 'romantic':
+			genreString[index] = 'romance'
+		elif word == 'period':
+			genreString[index] = 'history'
+		elif word == 'sports':
+			genreString[index] = 'sport'
+		elif word == 'concert':
+			genreString[index] = 'musical'
+		elif word in ['imax', 'epic']:
+			genreString[index] = 'other'
 
-	# 6 = Runtime
+
+	# 6 = Runtime ---------------------------------------------------------------------------------------------
 	# format 2 hrs. 0 min. -> 02:00:00
 	runtime = info[6].getText()
 	if runtime != 'N/A':
@@ -192,12 +193,12 @@ def readStaticData(info, connection):
 		runtime = None
 	#print ("Runtime: " + str(runtime))
 
-	# 7 = Rating
+	# 7 = Rating ----------------------------------------------------------------------------------------------
 
 	rating = info[7].getText()
 	#print ("Rating: " + rating) 
 
-	# 8 = Production Budget
+	# 8 = Production Budget ------------------------------------------------------------------------------------
 
 	budget = info[8].getText()
 	if budget != 'N/A':
@@ -211,19 +212,46 @@ def readStaticData(info, connection):
 
 	with connection.cursor() as cursor:
 		sql = (
-			"INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `title`=%s, `release_date`=%s"
+			"INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s) "
+			"ON DUPLICATE KEY UPDATE `title`=%s, `release_date`=%s"
 			)
-		#print (sql)
 		cursor.execute(sql, (title, release, title, release))
-		#print ('Success')
+
+		sql = "SELECT `id` FROM `movies` WHERE `title`=%s AND release_date=%s"
+		cursor.execute(sql, (title, release))
+		for row in cursor:
+			primaryid = row['id']
+
+		sql = (
+			"INSERT INTO `misc` (`id`, `distributor`, `run_time`, `rating`) "
+			"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `distributor`=%s, `run_time`=%s, `rating`=%s"
+			)
+		cursor.execute(sql, (primaryid, distributor, runtime, rating, distributor, runtime, rating))
+
+		sql = (
+			"INSERT INTO `financial` (`id`, `production_budget`, `domestic_gross`, `worldwide_gross`) "
+			"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `production_budget`=%s, `domestic_gross`=%s, `worldwide_gross`=%s"
+			)
+		cursor.execute(sql, (primaryid, budget, total, None, budget, total, None))
+
+		sql = (
+			"INSERT INTO `genre` (`id`, `genres`) "
+			"VALUES (%s, %s) ON DUPLICATE KEY UPDATE `genres`=%s"
+			)
+		cursor.execute(sql, (primaryid, genre, genre))
+
+
+		for column in genreString:
+			sql  = 'INSERT INTO `genre` (`id`, `' + column + '`) VALUES (%s, %s) ON DUPLICATE KEY UPDATE `' + column + '`=%s'
+			#print (sql)
+			cursor.execute(sql, (primaryid, '1', '1'))
+
+
 	connection.commit()
 
-	global CURRENT_TITLE
-	CURRENT_TITLE = title
+	readTableData(url, connection, primaryid)
 
-def readTableData(url, connection):
-
-	PRIMARY_ID = 1
+def readTableData(url, connection, primaryid):
 	
 	# print (url)
 	tableurl = "http://www.boxofficemojo.com/movies/?page=weekly&id=insertidhere.htm"
@@ -310,30 +338,27 @@ def readTableData(url, connection):
 			# Week
 			week = tds[8].getText().strip('b').strip("'")
 
-			print (
-				"ID: %s, Title: %s, Year: %s, Date: %s, Rank: %s, Weekly Gross: %s, Change: %s, "
-				"Theaters: %s, Change: %s, Average: %s, Gross to date: %s, Week #: %s"
-				% (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekly_gross, change, 
-					theaters, change_theaters, average, gross, week))
-
+			# print (
+			# 	"ID: %s, Year: %s, Date: %s, Rank: %s, Weekly Gross: %s, Change: %s, "
+			# 	"Theaters: %s, Change: %s, Average: %s, Gross to date: %s, Week #: %s"
+			# 	% (CURRENT_ID, year, date, rank, weekly_gross, change, 
+			# 		theaters, change_theaters, average, gross, week))
 
 			with connection.cursor() as cursor:
 				sql = (
-					"INSERT INTO `time_sensitive` (`id`, `title`, `year`, `date`, `rank`, `weekly_gross`, "
+					"INSERT INTO `weeks` (`id`, `year`, `date`, `rank`, `weekly_gross`, "
 					"`change_wg`, `theaters`, `change_theaters`, `average`, `gross_to_date`, `week`) "
-					"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+					"VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
 					"ON DUPLICATE KEY UPDATE `year`=%s, `date`=%s, `rank`=%s, `weekly_gross`=%s, `change_wg`=%s, "
 					"`theaters`=%s, `change_theaters`=%s, `average`=%s, `gross_to_date`=%s, `week`=%s"
 					)
 				#print (sql)
-				cursor.execute(sql, (PRIMARY_ID, CURRENT_TITLE, year, date, rank, weekly_gross, 
+				cursor.execute(sql, (primaryid, year, date, rank, weekly_gross, 
 					change, theaters, change_theaters, average, gross, week, year, date, rank, 
 					weekly_gross, change, theaters, change_theaters, average, gross, week))
 				# print ('Success')
 			connection.commit()
 
-			# Increment primary id
-			PRIMARY_ID+=1
 
 	except Exception as e:
 		print ("readTableData error " + str(type(e)))
