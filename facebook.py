@@ -27,8 +27,8 @@ def generateQueryString(title):
 
 def getTitles(): 
 	queryList = []
-	connection = pymysql.connect(host = 'localhost', user = 'root',
-	password = 'pass', db = 'entertainment_analytics', charset = 'utf8mb4',
+	connection = pymysql.connect(host = '10.201.31.179', user = 'fooUser',
+	password = 'pass', db = 'imdb', charset = 'utf8mb4',
 	cursorclass = pymysql.cursors.DictCursor) 
 
 	with connection.cursor() as cursor:
