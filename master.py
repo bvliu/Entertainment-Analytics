@@ -2,7 +2,10 @@ import boxofficemojo
 import sundance
 
 if __name__ == '__main__':
+
+	print ('Running iMDB')
 	
+
 	print ('Running Box Office Mojo')
 	boxofficemojo.getURLs()
 	boxofficemojo.baseScrapingLoop()

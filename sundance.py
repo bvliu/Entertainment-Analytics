@@ -21,28 +21,45 @@ def baseScrapingLoop():
 					#print (releaseDate)
 
 				title = row[0]
+				filmtype = row[1]
+				section = row[2]
+				event = row[3]
+
 
 				with connection.cursor() as cursor:
-					sql = (
-						"INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s) "
-						"ON DUPLICATE KEY UPDATE `title`=%s, `release_date`=%s"
-						)
-					cursor.execute(sql, (title, releaseDate, title, releaseDate))
 
-					sql = "SELECT `id` FROM `movies` WHERE `title`=%s AND release_date=%s"
-					cursor.execute(sql, (title, releaseDate))
+					exists = False
+					findTitleInMovies = "SELECT `id`, `title`, `release_date` FROM `movies` WHERE `title`=%s"
+					cursor.execute(findTitleInMovies, title)
 					for row in cursor:
-						primaryid = row['id']
+						dateResult = str(row['release_date'])[:4]
+						if (dateResult == year):
+							exists = True
+							tempid = row['id']
+							sql = (
+								"INSERT INTO `misc` (`id`, `film_type`, `section`, `event`) "
+								"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `film_type`=%s, `section`=%s, `event`=%s"
+								)
+							cursor.execute(sql, (tempid, filmtype, section, event, filmtype, section, event))
 
-					filmtype = row[1]
-					section = row[2]
-					event = row[3]
+					if not exists:
+						sql = (
+							"INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s) "
+							"ON DUPLICATE KEY UPDATE `title`=%s, `release_date`=%s"
+							)
+						cursor.execute(sql, (title, releaseDate, title, releaseDate))
 
-					sql = (
-						"INSERT INTO `misc` (`id`, `film_type`, `section`, `event`) "
-						"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `film_type`=%s, `section`=%s, `event`=%s"
-						)
-					cursor.execute(sql, (primaryid, filmtype, section, event, filmtype, section, event))
+						sql = "SELECT `id` FROM `movies` WHERE `title`=%s AND release_date=%s"
+						cursor.execute(sql, (title, releaseDate))
+						for row in cursor:
+							print (row)
+							primaryid = row['id']
+
+						sql = (
+							"INSERT INTO `misc` (`id`, `film_type`, `section`, `event`) "
+							"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `film_type`=%s, `section`=%s, `event`=%s"
+							)
+						cursor.execute(sql, (primaryid, filmtype, section, event, filmtype, section, event))
 
 
 			except Exception as e:

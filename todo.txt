@@ -1,0 +1,25 @@
+genre
+format
+runtime
+budget
+producer experience
+cast experience (aa
+
+
+scrape likes/followers
+klout/buzz score
+correlate between score and revenue?
+
+rotten tomatoes
+
+master list
+movies from 2014 onward, facebook scraping 
+aws
+clustering
+take a look at clustering and k nearest neighbors / heirarchical clustering
+
+connect with mohk
+connect with leaders
+connect with ben
+
+top 25 films of the last decade
