@@ -223,10 +223,10 @@ def readStaticData(info, connection, url):
 			primaryid = row['id']
 
 		sql = (
-			"INSERT INTO `misc` (`id`, `distributor`, `run_time`, `rating`) "
-			"VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `distributor`=%s, `run_time`=%s, `rating`=%s"
+			"INSERT INTO `misc` (`id`, `title`, `distributor`, `run_time`, `rating`) "
+			"VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE `title`=%s, `distributor`=%s, `run_time`=%s, `rating`=%s"
 			)
-		cursor.execute(sql, (primaryid, distributor, runtime, rating, distributor, runtime, rating))
+		cursor.execute(sql, (primaryid, title, distributor, runtime, rating, title, distributor, runtime, rating))
 
 		sql = (
 			"INSERT INTO `financial` (`id`, `production_budget`, `domestic_gross`, `worldwide_gross`) "
