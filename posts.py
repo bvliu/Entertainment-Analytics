@@ -63,7 +63,7 @@ def scrapeFeedData(info):
 
 			with connection.cursor() as cursor:
 				sql = (
-					"INSERT INTO `posts` (`id`, `fb_id`, `post_id`, `date`, `type`, `message`, `comments`, `likes`, `shares`, `link`) VALUES "
+					"INSERT INTO `posts_verified` (`id`, `fb_id`, `post_id`, `date`, `type`, `message`, `comments`, `likes`, `shares`, `link`) VALUES "
 					"(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE `id`=%s, `fb_id`=%s, `date`=%s, `type`=%s, `message`=%s, `comments`=%s, `likes`=%s, `shares`=%s, `link`=%s"
 					)
 				cursor.execute(sql, (movieID, info[1], postID, createdTime, postType, message, comments, likes, shares, link, movieID, info[1], createdTime, postType, message, comments, likes, shares, link))
@@ -104,7 +104,7 @@ def getPages():
 	cursorclass = pymysql.cursors.DictCursor) 
 
 	with connection.cursor() as cursor:
-		sql = "SELECT `id`, `fb_id` FROM `facebook` WHERE `fb_id` IS NOT NULL"
+		sql = "SELECT `id`, `fb_id` FROM `facebook` WHERE `fb_id` IS NOT NULL AND `verified`='true'"
 		cursor.execute(sql)
 		for row in cursor:
 			movieID = row['id']

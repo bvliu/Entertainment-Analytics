@@ -1,7 +1,7 @@
 import re
 from datetime import *
 
-def formatTime(myTime)
+def formatTime(myTime):
 	runtime = int(myTime.replace(' min', ''))
 
 	minutes = runtime%60
@@ -12,3 +12,8 @@ def formatTime(myTime)
 	runtime = datetime.strptime(runtime, "%H %M")
 	runtime = runtime.strftime("%H:%M:00")	
 	return runtime
+
+
+url = 'https://pro-labs.imdb.com/title/tt1722476/'
+url = url.replace('https://pro-labs.imdb.com/title','').strip('/')
+print (url)

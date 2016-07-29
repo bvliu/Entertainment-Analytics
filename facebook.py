@@ -10,12 +10,12 @@ from multiprocessing import cpu_count
 from urllib.parse import urlencode
 import csv
 
-# appid = "1118759701501012"
-# appsecret = "0ad3fbde533a3e4662f36a86389e7764"
+appid = "1118759701501012"
+appsecret = "0ad3fbde533a3e4662f36a86389e7764"
 # access_token="1118759701501012|x2pLWmhjDhSD3RbTG-qs_VyyNtE"
 
-appid = "1566084017029348"
-appsecret = "9ac4952612861e3aa65de0c6e4b81060"
+#appid = "1566084017029348"
+#appsecret = "9ac4952612861e3aa65de0c6e4b81060"
 access_token= appid + "|" + appsecret
 
 POOL = Pool(cpu_count()*2)
@@ -37,7 +37,7 @@ def getTitles():
 	cursorclass = pymysql.cursors.DictCursor) 
 
 	with connection.cursor() as cursor:
-		sql = "SELECT `id`, `title`, `release_date` FROM `movies`"
+		sql = "SELECT m.`id`, `title`, `release_date` FROM `movies` as m LEFT OUTER JOIN `facebook` as f ON (m.`id` = f.`id`) WHERE f.`id` IS NULL"
 		cursor.execute(sql)
 		for row in cursor:
 			movieID = row['id']
