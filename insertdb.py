@@ -67,8 +67,8 @@ def insertSQL(row):
 			else: 
 				runtime = None
 
-			# sql = "INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s)" 
-			# cursor.execute(sql, (column[0], date))
+			sql = "INSERT INTO `movies` (`title`, `release_date`) VALUES (%s, %s)" 
+			cursor.execute(sql, (column[0], date))
 
 			# sql = "SELECT `id` FROM `movies` WHERE `title`=%s AND `release_date`=%s"
 			# cursor.execute(sql, (column[0], date))
