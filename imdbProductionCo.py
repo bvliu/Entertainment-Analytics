@@ -1,3 +1,5 @@
+#PURPOSE: This will collect the Production companies and ratings from the movie list
+
 import urllib.request
 import json
 from bs4 import BeautifulSoup 
@@ -5,16 +7,16 @@ import re
 
 x=0
 
-#out = open('C:\\Users\\582406\\Documents\\Courtney 2016\\DataScrapeExample\\testing7-24.txt','w')
 out = open('C:\\Users\\582406\\Documents\\Courtney 2016\\DataScrapeExample\\Redo\\ProAndRating\\list2.txt','w')
 
 error=open('C:\\Users\\582406\\Documents\\Courtney 2016\\DataScrapeExample\\errorEx.txt','w')
 
-f=open('C:\\Users\\582406\\Documents\\Courtney 2016\\DataScrapeExample\\Redo\\MovieListPart1.txt')
+f=open('C:\\Users\\582406\\Documents\\Courtney 2016\\DataScrapeExample\\Redo\\MovieListPart2.txt')
 line=f.readline()
 
 while line: 
 
+	#Default values 
 	mVotes=0
 	avM=0.0
 	feVotes=0
@@ -76,16 +78,16 @@ while line:
 		id=json_obj['imdbID']
 		out.write(id+"\t")
 
-#START OF THE PRODUCTION COMPANY!!!! -------------------------------------
+#START OF THE PRODUCTION COMPANY -------------------------------------
 		urlProd="http://www.imdb.com/title/"
 		urlProd+=id 
 		urlProd+="/companycredits?ref_=tt_dt_co"
-
 
 		readURL=urllib.request.urlopen(urlProd).read()	
 		soup=BeautifulSoup(readURL, "html.parser")
 		tableStats=soup.find("ul", { "class" : "simpleList"})
 
+		#Finds the Production Companies and separates by a comma 
 		for row in tableStats.find_all('a'):
 			try:
 				name=row.getText()
@@ -101,7 +103,7 @@ while line:
 
 		out.write("\t")
 
-#THIS IS THE RATING! ------------------------ 
+#START OF THE RATING ------------------------ 
 
 		urlRating='http://www.imdb.com/title/'
 		urlRating+=id
@@ -123,7 +125,7 @@ while line:
 		#Ratings 1-10 
 
 		#---------------------------------------------------------
-		#SECOND TABLE 
+		#SECOND TABLE for Demographics  
 
 		tableStats=soup.findAll("table", { "cellpadding" : "0"})[1]
 
@@ -140,6 +142,7 @@ while line:
 			print("Number:" + num)
 			print("Average:" + average)
 
+			#Specifically finding these words in the table to collect data from 
 			if words=="Males": 
 				mVotes=num
 				avM=average
@@ -210,8 +213,8 @@ while line:
 	except Exception as e: 
 		print("\n")
 		pass
-
-	print("Average Males: " + str(avM))	
+	
+	#Writes to the outfile the ratings in order 
 	out.write(str(mVotes) + "\t" + str(avM) + "\t" + str(feVotes)+ "\t" + str(avFe)+ "\t" + str(check1)+ "\t" + str(avCheck1)+ "\t" + str(mCheck1)+ "\t" + str(avMCheck1) + "\t" + str(feCheck1) + "\t" + str(avFeCheck1)+ "\t"	+ str(check2)+ "\t" + str(avCheck2)+ "\t" + str(mCheck2)+ "\t" + str(mCheck2)+ "\t" + str(avMCheck2)+ "\t" + str(feCheck2)+ "\t" + str(avFeCheck2)+ "\t" + str(check3)+ "\t" + str(avCheck3)+ "\t" + str(mCheck3)+ "\t" + str(avMCheck3)+ "\t" + str(feCheck3)+ "\t" + str(avFeCheck3)+ "\t" + str(check4)+ "\t"+ str(avCheck4)+ "\t"+ str(mCheck4)+ "\t" + str(avMCheck4)+ "\t"+ str(feCheck4)+ "\t"+ str(avFeCheck4)+ "\t"+ str(US)+ "\t"+ str(avUS)+ "\t"+ str(nonUS) + "\t"+ str(avNonUS) + "\n")
 	line=f.readline()
 
